@@ -67,6 +67,7 @@ class FrozenCircuit(AbstractCircuit, protocols.SerializableByKey):
         self._device = base.device
 
         # These variables are memoized when first requested.
+        self._hash: Optional[int] = None
         self._num_qubits: Optional[int] = None
         self._unitary: Optional[Union[np.ndarray, NotImplementedType]] = None
         self._qid_shape: Optional[Tuple[int, ...]] = None
@@ -84,8 +85,19 @@ class FrozenCircuit(AbstractCircuit, protocols.SerializableByKey):
     def device(self) -> devices.Device:
         return self._device
 
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        del state['_hash']
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self._hash = super().__hash__()
+
     def __hash__(self):
-        return hash((self.moments, self.device))
+        if self._hash is None:
+            self._hash = hash((self.moments, self.device))
+        return self._hash
 
     def diagram_name(self):
         """Name used to represent this in circuit diagrams."""
